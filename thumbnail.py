@@ -3,7 +3,7 @@ from io import BytesIO
 import textwrap
 import requests
 
-FONT_PATH = "fonts/Jibriel Small Caps.otf"
+FONT_PATH = "fonts/JIB.otf"
 BG_IMAGE = "static/BG.jpg"
 
 OWNER = "@ll_PANDA_BBY_ll"
