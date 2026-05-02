@@ -22,16 +22,15 @@ def home():
 def thumb():
     query = request.args.get("query")
     data = jiosaavn.search_for_song(query, False, True)
-    song = data[0] if isinstance(data, list) else data
+    
+    # ✅ Fix: results list se pehla song lo
+    results = data.get("results", [])
+    if not results:
+        return "Song not found", 404
+    song = results[0]
 
     img_io = generate_thumbnail(song)
-
-    return send_file(
-        img_io,
-        mimetype="image/png",
-        as_attachment=False,
-        download_name="thumb.png"
-    )
+    return send_file(img_io, mimetype="image/png", as_attachment=False, download_name="thumb.png")
 
 # -------- RESULT WITH CUSTOM THUMB URL -------- #
 
