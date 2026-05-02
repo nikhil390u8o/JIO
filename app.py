@@ -22,7 +22,6 @@ def thumb():
     if not song_id:
         return "ID missing", 400
 
-    # ✅ Direct ID se fetch, no search
     song_data = jiosaavn.get_song(song_id, False)
     if not song_data:
         return "Song not found", 404
@@ -30,7 +29,8 @@ def thumb():
     song = {
         "song": song_data.get("song", "Unknown Song"),
         "artist": song_data.get("primary_artists", "Unknown Artist"),
-        "duration": song_data.get("duration", 0)
+        "duration": song_data.get("duration", 0),
+        "image": song_data.get("image", "")   # ✅ image URL add
     }
 
     img_io = generate_thumbnail(song)
