@@ -1,9 +1,13 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from io import BytesIO
 import textwrap
+import requests
 
 FONT_PATH = "fonts/Impact.ttf"
 BG_IMAGE = "static/BG.jpg"
+
+OWNER = "@ll_PANDA_BBY_ll"
+CHANNEL = "t.me/sxyaru"
 
 
 def sec_to_time(sec):
@@ -11,52 +15,117 @@ def sec_to_time(sec):
         sec = int(sec)
         m = sec // 60
         s = sec % 60
-        return f"{m}:{s:02d}"
+        return f"{m:02d}:{s:02d}"
     except:
-        return "0:00"
+        return "00:00"
+
+
+def fetch_image(url):
+    try:
+        r = requests.get(url, timeout=5)
+        return Image.open(BytesIO(r.content)).convert("RGB")
+    except:
+        return None
+
+
+def rounded_crop(img, radius=40):
+    img = img.resize((300, 300))
+    mask = Image.new("L", img.size, 0)
+    draw = ImageDraw.Draw(mask)
+    draw.rounded_rectangle([0, 0, *img.size], radius=radius, fill=255)
+    output = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    output.paste(img, mask=mask)
+    return output
+
+
+def draw_progress_bar(draw, x, y, width, height,
+                       track_color="#444444", fill_color="#00BFFF", thumb_color="white"):
+    draw.rounded_rectangle([x, y, x + width, y + height], radius=height // 2, fill=track_color)
+    # Thumb circle at start (0%)
+    cx = x
+    cy = y + height // 2
+    r = height + 2
+    draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=thumb_color)
 
 
 def generate_thumbnail(song_json):
-    # ✅ Fix: correct keys use karo
-    song = song_json.get("song", "Unknown Song")
+    song  = song_json.get("song", "Unknown Song")
     artist = song_json.get("artist", "Unknown Artist")
     duration = sec_to_time(song_json.get("duration", 0))
-    # ... baaki same rehga
+    image_url = song_json.get("image", "")
 
-    img = Image.open(BG_IMAGE).convert("RGB")
-    W, H = img.size
-    draw = ImageDraw.Draw(img)
+    # ── Canvas ──────────────────────────────────────────
+    W, H = 900, 380
+    canvas = Image.new("RGB", (W, H), "#1a1a2e")  # dark navy bg
+    draw = ImageDraw.Draw(canvas)
 
-    title_font = ImageFont.truetype(FONT_PATH, int(W * 0.065))
-    info_font = ImageFont.truetype(FONT_PATH, int(W * 0.035))
+    # Subtle gradient overlay
+    for i in range(H):
+        alpha = int(30 * (1 - i / H))
+        draw.line([(0, i), (W, i)], fill=(255, 255, 255, alpha))
 
-    # Wrap title
-    wrap_width = int(W / 70)
-    lines = textwrap.wrap(song, width=wrap_width)
+    # ── Album Art (left) ────────────────────────────────
+    art_x, art_y = 35, 40
+    album_art = fetch_image(image_url)
+    if album_art:
+        art = rounded_crop(album_art, radius=30)
+        canvas.paste(art, (art_x, art_y), art)
+    else:
+        draw.rounded_rectangle([art_x, art_y, art_x+300, art_y+300], radius=30, fill="#333355")
 
-    total_h = 0
-    dims = []
+    # ── Right panel ─────────────────────────────────────
+    rx = 370  # right content start x
+    ry = 45
+
+    title_font  = ImageFont.truetype(FONT_PATH, 46)
+    artist_font = ImageFont.truetype(FONT_PATH, 28)
+    small_font  = ImageFont.truetype(FONT_PATH, 22)
+    tag_font    = ImageFont.truetype(FONT_PATH, 18)
+
+    # Song title (wrapped)
+    max_w = W - rx - 20
+    lines = textwrap.wrap(song, width=22)[:2]  # max 2 lines
     for line in lines:
-        box = draw.textbbox((0, 0), line, font=title_font)
-        h = box[3] - box[1]
-        total_h += h + 20
-        dims.append((line, box, h))
+        draw.text((rx, ry), line, font=title_font, fill="#FFD700")
+        ry += 54
 
-    y = (H - total_h) / 2
+    # Artist
+    artist_short = artist[:45] + "..." if len(artist) > 45 else artist
+    draw.text((rx, ry + 5), artist_short, font=artist_font, fill="#00BFFF")
+    ry += 42
 
-    for line, box, h in dims:
-        x = (W - (box[2] - box[0])) / 2
-        draw.text((x, y), line, font=title_font, fill="#39ff14")
-        y += h + 20
+    # Divider line
+    draw.line([(rx, ry + 10), (W - 20, ry + 10)], fill="#333366", width=1)
+    ry += 25
 
-    info = f"{artist}  •  {duration}"
-    box = draw.textbbox((0, 0), info, font=info_font)
-    x = (W - (box[2] - box[0])) / 2
-    draw.text((x, y + 10), info, font=info_font, fill="white")
+    # ── Progress Bar ────────────────────────────────────
+    bar_x = rx
+    bar_w = W - rx - 25
+    bar_y = ry + 10
+    bar_h = 7
 
-    # ✅ SAVE IN MEMORY (not disk)
+    draw_progress_bar(draw, bar_x, bar_y, bar_w, bar_h,
+                      track_color="#444466",
+                      fill_color="#00BFFF",
+                      thumb_color="white")
+
+    # Times
+    time_y = bar_y + bar_h + 10
+    draw.text((bar_x, time_y), "00:00", font=small_font, fill="#aaaacc")
+    dur_box = draw.textbbox((0, 0), duration, font=small_font)
+    draw.text((bar_x + bar_w - (dur_box[2] - dur_box[0]), time_y),
+              duration, font=small_font, fill="#aaaacc")
+
+    # ── Owner + Channel watermark (bottom) ──────────────
+    wm_y = H - 32
+    draw.text((20, wm_y), OWNER, font=tag_font, fill="#FF6B6B")
+    powered = f"Powered by {CHANNEL}"
+    pw_box = draw.textbbox((0, 0), powered, font=tag_font)
+    draw.text((W - (pw_box[2] - pw_box[0]) - 15, wm_y),
+              powered, font=tag_font, fill="#888899")
+
+    # ── Output ──────────────────────────────────────────
     img_io = BytesIO()
-    img.save(img_io, "PNG")
+    canvas.save(img_io, "PNG")
     img_io.seek(0)
-
     return img_io
