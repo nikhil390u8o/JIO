@@ -3,11 +3,11 @@ from io import BytesIO
 import textwrap
 import requests
 
-FONT_PATH = "fonts/Impact.ttf"
+FONT_PATH = "fonts/Jibriel Small Caps.otf"
 BG_IMAGE = "static/BG.jpg"
 
-OWNER = "@ll_PANDA_BBY_ll"
-CHANNEL = "t.me/sxyaru"
+OWNER = "ᴘᴀɴᴅᴀ-ʙᴀʙʏ"
+CHANNEL = "ᴀʀᴜ x ᴀᴘɪ [ʙᴏᴛs]"
 
 
 def sec_to_time(sec):
