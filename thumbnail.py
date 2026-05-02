@@ -17,12 +17,11 @@ def sec_to_time(sec):
 
 
 def generate_thumbnail(song_json):
-    # ✅ Correct JioSaavn keys
-    song = song_json.get("title", "Unknown Song")
-    artist = song_json.get("subtitle", "Unknown Artist")
-    duration = sec_to_time(
-        song_json.get("more_info", {}).get("duration", 0)
-    )
+    # ✅ Fix: correct keys use karo
+    song = song_json.get("song", "Unknown Song")
+    artist = song_json.get("artist", "Unknown Artist")
+    duration = sec_to_time(song_json.get("duration", 0))
+    # ... baaki same rehga
 
     img = Image.open(BG_IMAGE).convert("RGB")
     W, H = img.size
