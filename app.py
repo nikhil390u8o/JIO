@@ -1,15 +1,12 @@
-from flask import Flask, request, redirect, jsonify, send_from_directory
+from flask import Flask, request, redirect, jsonify, send_file
 import jiosaavn
-import os
-from traceback import print_exc
 from flask_cors import CORS
 from thumbnail import generate_thumbnail
+from io import BytesIO
+from traceback import print_exc
 
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__)
 CORS(app)
-
-# Ensure static/thumbs folder exists
-os.makedirs("static/thumbs", exist_ok=True)
 
 
 @app.route('/')
@@ -17,11 +14,7 @@ def home():
     return redirect("https://cyberboysumanjay.github.io/JioSaavnAPI/")
 
 
-@app.route('/static/<path:filename>')
-def static_files(filename):
-    return send_from_directory('static', filename)
-
-from io import BytesIO
+# -------- THUMBNAIL STREAM ROUTE -------- #
 
 @app.route("/thumb/")
 def thumb():
@@ -30,8 +23,6 @@ def thumb():
         return {"error": "query missing"}
 
     data = jiosaavn.search_for_song(query, False, True)
-
-    # first result lo
     song = data[0] if isinstance(data, list) else data
 
     img_io = generate_thumbnail(song)
@@ -44,7 +35,7 @@ def thumb():
     )
 
 
-# ---------------- RESULT WITH CUSTOM THUMBNAIL ---------------- #
+# -------- RESULT WITH CUSTOM THUMB URL -------- #
 
 @app.route('/result/')
 def result():
@@ -61,22 +52,20 @@ def result():
     try:
         data = jiosaavn.search_for_song(query, lyrics, True)
 
-        # ---------- MULTIPLE SONGS ----------
-        if isinstance(data, list) and len(data) > 0:
-            for song in data:
-                thumb_filename = generate_thumbnail(song)
-                song["custom_thumbnail"] = (
-                    request.host_url + "static/thumbs/" + thumb_filename
-                )
+        def add_thumb(song):
+            song["custom_thumbnail"] = (
+                request.host_url + "thumb?query=" + query
+            )
+            return song
+
+        # Multiple songs
+        if isinstance(data, list):
+            data = [add_thumb(song) for song in data]
             return jsonify(data)
 
-        # ---------- SINGLE SONG ----------
+        # Single song
         if isinstance(data, dict):
-            thumb_filename = generate_thumbnail(data)
-            data["custom_thumbnail"] = (
-                request.host_url + "static/thumbs/" + thumb_filename
-            )
-            return jsonify(data)
+            return jsonify(add_thumb(data))
 
         return jsonify(data)
 
