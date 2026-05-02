@@ -1,11 +1,9 @@
 from PIL import Image, ImageDraw, ImageFont
-import io, textwrap, os, uuid
+from io import BytesIO
+import textwrap
 
 FONT_PATH = "fonts/Impact.ttf"
 BG_IMAGE = "static/BG.jpg"
-OUT_DIR = "static/thumbs"
-
-os.makedirs(OUT_DIR, exist_ok=True)
 
 
 def sec_to_time(sec):
@@ -19,7 +17,7 @@ def sec_to_time(sec):
 
 
 def generate_thumbnail(song_json):
-    # ✅ Correct keys from JioSaavn API
+    # ✅ Correct JioSaavn keys
     song = song_json.get("title", "Unknown Song")
     artist = song_json.get("subtitle", "Unknown Artist")
     duration = sec_to_time(
@@ -33,6 +31,7 @@ def generate_thumbnail(song_json):
     title_font = ImageFont.truetype(FONT_PATH, int(W * 0.065))
     info_font = ImageFont.truetype(FONT_PATH, int(W * 0.035))
 
+    # Wrap title
     wrap_width = int(W / 70)
     lines = textwrap.wrap(song, width=wrap_width)
 
@@ -56,8 +55,9 @@ def generate_thumbnail(song_json):
     x = (W - (box[2] - box[0])) / 2
     draw.text((x, y + 10), info, font=info_font, fill="white")
 
-    filename = f"{uuid.uuid4().hex}.png"
-    save_path = os.path.join(OUT_DIR, filename)
-    img.save(save_path, "PNG")
+    # ✅ SAVE IN MEMORY (not disk)
+    img_io = BytesIO()
+    img.save(img_io, "PNG")
+    img_io.seek(0)
 
-    return filename
+    return img_io
