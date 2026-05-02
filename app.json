@@ -1,0 +1,13 @@
+{
+    "name": "JIOSAAVN",
+    "description": "UNOFICIAL JIO SAAVN AUDIO API",
+    "author": "PANDA-BABY",
+    "keywords": [
+        "flask",
+        "python",
+        "saavn",
+        "jiosaavn",
+        "music"
+    ],
+    "repository": "https://github.com/PANDA_KA_LWDA_LEGA"
+}
