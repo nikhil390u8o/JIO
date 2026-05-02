@@ -1,30 +1,38 @@
 from PIL import Image, ImageDraw, ImageFont
-import io, textwrap
+import io, textwrap, os, uuid
 
 FONT_PATH = "fonts/Impact.ttf"
-BG_IMAGE = "BG.jpg"
+BG_IMAGE = "static/BG.jpg"
+OUT_DIR = "static/thumbs"
+
+os.makedirs(OUT_DIR, exist_ok=True)
+
 
 def sec_to_time(sec):
-    sec = int(sec)
-    m = sec // 60
-    s = sec % 60
-    return f"{m}:{s:02d}"
+    try:
+        sec = int(sec)
+        m = sec // 60
+        s = sec % 60
+        return f"{m}:{s:02d}"
+    except:
+        return "0:00"
 
-def generate_thumb(song_json):
-    # Required fields from JSON
-    song = song_json.get("song", "Unknown Song")
-    artist = song_json.get("primary_artists", "Unknown Artist")
-    duration = sec_to_time(song_json.get("duration", 0))
+
+def generate_thumbnail(song_json):
+    # ✅ Correct keys from JioSaavn API
+    song = song_json.get("title", "Unknown Song")
+    artist = song_json.get("subtitle", "Unknown Artist")
+    duration = sec_to_time(
+        song_json.get("more_info", {}).get("duration", 0)
+    )
 
     img = Image.open(BG_IMAGE).convert("RGB")
     W, H = img.size
     draw = ImageDraw.Draw(img)
 
-    # Responsive font
     title_font = ImageFont.truetype(FONT_PATH, int(W * 0.065))
     info_font = ImageFont.truetype(FONT_PATH, int(W * 0.035))
 
-    # Wrap title
     wrap_width = int(W / 70)
     lines = textwrap.wrap(song, width=wrap_width)
 
@@ -38,19 +46,18 @@ def generate_thumb(song_json):
 
     y = (H - total_h) / 2
 
-    # Draw song title
     for line, box, h in dims:
         x = (W - (box[2] - box[0])) / 2
         draw.text((x, y), line, font=title_font, fill="#39ff14")
         y += h + 20
 
-    # Draw artist + duration
     info = f"{artist}  •  {duration}"
     box = draw.textbbox((0, 0), info, font=info_font)
     x = (W - (box[2] - box[0])) / 2
     draw.text((x, y + 10), info, font=info_font, fill="white")
 
-    bio = io.BytesIO()
-    img.save(bio, "PNG")
-    bio.seek(0)
-    return bio
+    filename = f"{uuid.uuid4().hex}.png"
+    save_path = os.path.join(OUT_DIR, filename)
+    img.save(save_path, "PNG")
+
+    return filename
