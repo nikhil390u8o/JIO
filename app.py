@@ -4,7 +4,7 @@ from flask_cors import CORS
 from thumbnail import generate_thumbnail
 from io import BytesIO
 from traceback import print_exc
-
+from flask import send_file
 app = Flask(__name__)
 CORS(app)
 
@@ -16,12 +16,11 @@ def home():
 
 # -------- THUMBNAIL STREAM ROUTE -------- #
 
+
+
 @app.route("/thumb/")
 def thumb():
     query = request.args.get("query")
-    if not query:
-        return {"error": "query missing"}
-
     data = jiosaavn.search_for_song(query, False, True)
     song = data[0] if isinstance(data, list) else data
 
@@ -33,7 +32,6 @@ def thumb():
         as_attachment=False,
         download_name="thumb.png"
     )
-
 
 # -------- RESULT WITH CUSTOM THUMB URL -------- #
 
