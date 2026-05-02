@@ -21,6 +21,28 @@ def home():
 def static_files(filename):
     return send_from_directory('static', filename)
 
+from io import BytesIO
+
+@app.route("/thumb/")
+def thumb():
+    query = request.args.get("query")
+    if not query:
+        return {"error": "query missing"}
+
+    data = jiosaavn.search_for_song(query, False, True)
+
+    # first result lo
+    song = data[0] if isinstance(data, list) else data
+
+    img_io = generate_thumbnail(song)
+
+    return send_file(
+        img_io,
+        mimetype="image/png",
+        as_attachment=False,
+        download_name="thumb.png"
+    )
+
 
 # ---------------- RESULT WITH CUSTOM THUMBNAIL ---------------- #
 
