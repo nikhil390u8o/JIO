@@ -39,9 +39,8 @@ def rounded_crop(img, radius=40):
 
 
 def draw_progress_bar(draw, x, y, width, height,
-                       track_color="#444444", fill_color="#00BFFF", thumb_color="white"):
+                      track_color="#444444", fill_color="#00BFFF", thumb_color="white"):
     draw.rounded_rectangle([x, y, x + width, y + height], radius=height // 2, fill=track_color)
-    # Thumb circle at start (0%)
     cx = x
     cy = y + height // 2
     r = height + 2
@@ -49,20 +48,22 @@ def draw_progress_bar(draw, x, y, width, height,
 
 
 def generate_thumbnail(song_json):
-    song  = song_json.get("song", "Unknown Song")
+    song = song_json.get("song", "Unknown Song")
     artist = song_json.get("artist", "Unknown Artist")
     duration = sec_to_time(song_json.get("duration", 0))
     image_url = song_json.get("image", "")
 
-    # ── Canvas ──────────────────────────────────────────
+    # ── Canvas — BG.jpg as background ───────────────────
     W, H = 900, 380
-    canvas = Image.new("RGB", (W, H), "#1a1a2e")  # dark navy bg
-    draw = ImageDraw.Draw(canvas)
+    canvas = Image.open(BG_IMAGE).convert("RGB").resize((W, H))
 
-    # Subtle gradient overlay
-    for i in range(H):
-        alpha = int(30 * (1 - i / H))
-        draw.line([(0, i), (W, i)], fill=(255, 255, 255, alpha))
+    # Dark overlay for text readability
+    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 140))
+    canvas = canvas.convert("RGBA")
+    canvas = Image.alpha_composite(canvas, overlay)
+    canvas = canvas.convert("RGB")
+
+    draw = ImageDraw.Draw(canvas)
 
     # ── Album Art (left) ────────────────────────────────
     art_x, art_y = 35, 40
@@ -71,20 +72,19 @@ def generate_thumbnail(song_json):
         art = rounded_crop(album_art, radius=30)
         canvas.paste(art, (art_x, art_y), art)
     else:
-        draw.rounded_rectangle([art_x, art_y, art_x+300, art_y+300], radius=30, fill="#333355")
+        draw.rounded_rectangle([art_x, art_y, art_x + 300, art_y + 300], radius=30, fill="#333355")
 
     # ── Right panel ─────────────────────────────────────
-    rx = 370  # right content start x
+    rx = 370
     ry = 45
 
-    title_font  = ImageFont.truetype(FONT_PATH, 46)
+    title_font = ImageFont.truetype(FONT_PATH, 46)
     artist_font = ImageFont.truetype(FONT_PATH, 28)
-    small_font  = ImageFont.truetype(FONT_PATH, 22)
-    tag_font    = ImageFont.truetype(FONT_PATH, 18)
+    small_font = ImageFont.truetype(FONT_PATH, 22)
+    tag_font = ImageFont.truetype(FONT_PATH, 18)
 
-    # Song title (wrapped)
-    max_w = W - rx - 20
-    lines = textwrap.wrap(song, width=22)[:2]  # max 2 lines
+    # Song title
+    lines = textwrap.wrap(song, width=22)[:2]
     for line in lines:
         draw.text((rx, ry), line, font=title_font, fill="#FFD700")
         ry += 54
@@ -94,8 +94,8 @@ def generate_thumbnail(song_json):
     draw.text((rx, ry + 5), artist_short, font=artist_font, fill="#00BFFF")
     ry += 42
 
-    # Divider line
-    draw.line([(rx, ry + 10), (W - 20, ry + 10)], fill="#333366", width=1)
+    # Divider
+    draw.line([(rx, ry + 10), (W - 20, ry + 10)], fill="#ffffff44", width=1)
     ry += 25
 
     # ── Progress Bar ────────────────────────────────────
@@ -116,7 +116,7 @@ def generate_thumbnail(song_json):
     draw.text((bar_x + bar_w - (dur_box[2] - dur_box[0]), time_y),
               duration, font=small_font, fill="#aaaacc")
 
-    # ── Owner + Channel watermark (bottom) ──────────────
+    # ── Watermark ───────────────────────────────────────
     wm_y = H - 32
     draw.text((20, wm_y), OWNER, font=tag_font, fill="#FF6B6B")
     powered = f"Powered by {CHANNEL}"
