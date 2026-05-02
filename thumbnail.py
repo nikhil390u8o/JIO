@@ -1,7 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 import io, textwrap
 
-FONT_PATH = "fonts/BraveThorn-Regular.ttf"
+FONT_PATH = "fonts/Impact.ttf"
 BG_IMAGE = "BG.jpg"
 
 def sec_to_time(sec):
