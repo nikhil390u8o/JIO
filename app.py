@@ -5,6 +5,8 @@ import jiosaavn
 import os
 from traceback import print_exc
 from flask_cors import CORS
+from thumbnail import generate_thumbnail
+from flask import send_from_directory
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET", 'thankyoutonystark#weloveyou3000')
@@ -15,6 +17,9 @@ CORS(app)
 def home():
     return redirect("https://cyberboysumanjay.github.io/JioSaavnAPI/")
 
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory('static', filename)
 
 @app.route('/song/')
 def search():
@@ -135,17 +140,51 @@ def result():
     lyrics = False
     query = request.args.get('query')
     lyrics_ = request.args.get('lyrics')
+
     if lyrics_ and lyrics_.lower() != 'false':
         lyrics = True
 
-    if 'saavn' not in query:
-        return jsonify(jiosaavn.search_for_song(query, lyrics, True))
+    if not query:
+        return jsonify({"status": False, "error": "Query missing"})
+
     try:
+        # ---------------- NORMAL SEARCH ----------------
+        if 'saavn' not in query:
+            data = jiosaavn.search_for_song(query, lyrics, True)
+
+            for song in data:
+                try:
+                    thumb_path = generate_thumbnail(
+                        title=song["song"],
+                        artist=song["primary_artists"],
+                        duration=song["duration"],
+                        album_art=song["image"]
+                    )
+                    song["thumbnail"] = request.host_url + thumb_path
+                except Exception as e:
+                    print(e)
+                    song["thumbnail"] = None
+
+            return jsonify(data)
+
+        # ---------------- DIRECT SONG LINK ----------------
         if '/song/' in query:
-            print("Song")
             song_id = jiosaavn.get_song_id(query)
             song = jiosaavn.get_song(song_id, lyrics)
+
+            thumb_path = generate_thumbnail(
+                title=song["song"],
+                artist=song["primary_artists"],
+                duration=song["duration"],
+                album_art=song["image"]
+            )
+            song["thumbnail"] = request.host_url + thumb_path
+
             return jsonify(song)
+
+    except Exception as e:
+        print_exc()
+        return jsonify({"status": False, "error": str(e)})
 
         elif '/album/' in query:
             print("Album")
