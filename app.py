@@ -4,7 +4,7 @@ from flask_cors import CORS
 from thumbnail import generate_thumbnail
 from io import BytesIO
 from traceback import print_exc
-from flask import send_file
+
 app = Flask(__name__)
 CORS(app)
 
@@ -16,21 +16,26 @@ def home():
 
 # -------- THUMBNAIL STREAM ROUTE -------- #
 
-
-
 @app.route("/thumb/")
 def thumb():
-    query = request.args.get("query")
-    data = jiosaavn.search_for_song(query, False, True)
-    
-    # ✅ Fix: results list se pehla song lo
-    results = data.get("results", [])
-    if not results:
+    song_id = request.args.get("id")
+    if not song_id:
+        return "ID missing", 400
+
+    # ✅ Direct ID se fetch, no search
+    song_data = jiosaavn.get_song(song_id, False)
+    if not song_data:
         return "Song not found", 404
-    song = results[0]
+
+    song = {
+        "song": song_data.get("song", "Unknown Song"),
+        "artist": song_data.get("primary_artists", "Unknown Artist"),
+        "duration": song_data.get("duration", 0)
+    }
 
     img_io = generate_thumbnail(song)
     return send_file(img_io, mimetype="image/png", as_attachment=False, download_name="thumb.png")
+
 
 # -------- RESULT WITH CUSTOM THUMB URL -------- #
 
@@ -50,20 +55,12 @@ def result():
         data = jiosaavn.search_for_song(query, lyrics, True)
 
         def add_thumb(song):
-            song["custom_thumbnail"] = (
-                request.host_url + "thumb?query=" + query
-            )
+            # ✅ Query nahi, song ID use karo
+            song["custom_thumbnail"] = request.host_url + "thumb?id=" + song["id"]
             return song
 
-        # Multiple songs
-        if isinstance(data, list):
-            data = [add_thumb(song) for song in data]
-            return jsonify(data)
-
-        # Single song
-        if isinstance(data, dict):
-            return jsonify(add_thumb(data))
-
+        results = data.get("results", [])
+        data["results"] = [add_thumb(song) for song in results]
         return jsonify(data)
 
     except Exception as e:
