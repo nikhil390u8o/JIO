@@ -5,7 +5,6 @@ import requests
 
 import os
 
-# ✅ Absolute path use karo
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
 FONT_PATH = os.path.join(BASE_DIR, "fonts", "JIB.otf")
 BG_IMAGE  = os.path.join(BASE_DIR, "static", "BG.jpg")
@@ -19,9 +18,9 @@ def sec_to_time(sec):
         sec = int(sec)
         m = sec // 60
         s = sec % 60
-        return f"{m:02d}:{s:02d}"
+        return f"{m:02d}.{s:02d}"  # ✅ colon → dot
     except:
-        return "00:00"
+        return "00.00"
 
 
 def fetch_image(url):
