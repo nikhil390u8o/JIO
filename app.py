@@ -56,7 +56,7 @@ def result():
 
         def add_thumb(song):
             # ✅ Query nahi, song ID use karo
-            song["custom_thumbnail"] = request.host_url + "thumb?id=" + song["id"]
+            song["custom_thumbnail"] = request.host_url + "thumb/?id=" + song["id"]
             return song
 
         results = data.get("results", [])
