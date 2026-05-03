@@ -3,8 +3,12 @@ from io import BytesIO
 import textwrap
 import requests
 
-FONT_PATH = "fonts/JIB.otf"
-BG_IMAGE = "static/BG.jpg"
+import os
+
+# ✅ Absolute path use karo
+BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
+FONT_PATH = os.path.join(BASE_DIR, "fonts", "JIB.otf")
+BG_IMAGE  = os.path.join(BASE_DIR, "static", "BG.jpg")
 
 OWNER = "@ll_PANDA_BBY_ll"
 CHANNEL = "ARU X API [BOTS]"
